@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Time App</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Страницы -->
+        <div id="home" class="page active">
+            <h1>Домашняя страница</h1>
+            <div id="timer">00:00:00</div>
+            <button id="startStopTimer">Старт</button>
+            <div id="globalTimer">Глобальный счетчик: 00:00:00</div>
+            <div id="modeDisplay">Режим: Сутки</div>
+            <button id="switchMode">Переключить режим</button>
+            <div id="modeSwitchInfo">Следующее переключение через: <span id="nextSwitchTime">24:00:00</span></div>
+        </div>
+
+        <div id="leaders" class="page">
+            <h1>Лидеры</h1>
+            <ul id="leaderboard">
+                <!-- Список лидеров будет здесь -->
+            </ul>
+        </div>
+
+        <div id="friends" class="page">
+            <h1>Друзья</h1>
+            <button id="inviteFriend">Пригласить друга</button>
+            <div id="referralLinkDisplay" style="margin-top: 20px; color: #007bff;"></div>
+            <ul id="referrals">
+                <!-- Список рефералов будет здесь -->
+            </ul>
+        </div>
+
+        <div id="tasks" class="page">
+            <h1>Задания</h1>
+            <ul id="taskList">
+                <!-- Список заданий будет здесь -->
+            </ul>
+        </div>
+
+        <!-- Навигационная панель -->
+        <nav class="navbar">
+            <button data-page="home"><i class="fas fa-home"></i><br>Домашняя</button>
+            <button data-page="leaders"><i class="fas fa-trophy"></i><br>Лидеры</button>
+            <button data-page="friends"><i class="fas fa-users"></i><br>Друзья</button>
+            <button data-page="tasks"><i class="fas fa-tasks"></i><br>Задания</button>
+        </nav>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

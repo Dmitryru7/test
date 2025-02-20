@@ -1,0 +1,138 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #0e0e0e;
+    margin: 0;
+    padding: 0;
+    color: #e1e1e1;
+}
+
+.container {
+    padding: 20px;
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.page {
+    display: none;
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    margin-bottom: 80px; /* Отступ для навигации */
+}
+
+.page.active {
+    display: block;
+}
+
+#timer {
+    font-size: 3em;
+    margin: 20px 0;
+    font-weight: bold;
+    color: #007bff;
+}
+
+#globalTimer {
+    font-size: 1.2em;
+    margin: 20px 0;
+    color: #28a745;
+}
+
+button {
+    padding: 12px 24px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: #fff;
+    border-radius: 8px;
+    margin: 10px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
+
+#switchMode {
+    background-color: #28a745;
+}
+
+#switchMode:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+#modeDisplay {
+    font-size: 1.2em;
+    margin: 10px 0;
+    color: #6c757d;
+}
+
+#modeSwitchInfo {
+    font-size: 0.9em;
+    color: #888;
+    margin-top: 10px;
+}
+
+.navbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #1e1e1e;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.navbar button {
+    background: none;
+    color: #007bff;
+    border: none;
+    font-size: 16px;
+    padding: 10px;
+    transition: color 0.3s ease;
+}
+
+.navbar button:hover {
+    color: #0056b3;
+}
+
+/* Стили для списков */
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+ul li {
+    background-color: #2e2e2e;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+}
+
+ul li:hover {
+    transform: translateY(-2px);
+}
+
+/* Анимация для таймера */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+#timer {
+    animation: pulse 2s infinite;
+}
