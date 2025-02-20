@@ -19,10 +19,10 @@ const userSchema = new mongoose.Schema({
   telegramId: { type: String, required: true, unique: true },
   globalTimer: { type: Number, default: 0 },
   timerValue: { type: Number, default: 0 },
-  currentMode: { type: String, default: 'DAY' }, // Сохраняем текущий режим
-  lastModeSwitch: { type: Date, default: Date.now }, // Сохраняем время последнего переключения
+  currentMode: { type: String, default: 'DAY' },
+  lastModeSwitch: { type: Date, default: Date.now },
   isTimerRunning: { type: Boolean, default: false },
-  lastUpdateTime: { type: Date, default: Date.now }, // Добавляем поле для времени последнего обновления
+  lastUpdateTime: { type: Date, default: Date.now },
   referrals: [{ type: String }],
   bonusHistory: [{
     date: { type: Date, default: Date.now },
