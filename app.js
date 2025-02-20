@@ -24,8 +24,8 @@ let timerValue = 0;
 let globalTimerValue = 0;
 let isTimerRunning = false;
 let timerInterval;
-let lastModeSwitch = Date.now(); // Время последнего переключения режима
-let lastUpdateTime = Date.now(); // Время последнего обновления таймера
+let lastModeSwitch = Date.now();
+let lastUpdateTime = Date.now();
 
 // Элементы DOM
 const timerDisplay = document.getElementById('timer');
@@ -39,81 +39,38 @@ const nextSwitchTimeDisplay = document.getElementById('nextSwitchTime');
 const BACKUP_INTERVAL = 10000; // 10 секунд
 let backupInterval;
 
-// Загрузка данных пользователя
-async function loadUserData() {
-  try {
-    const response = await fetch(`/user/${userId}`);
-    const user = await response.json();
-    if (user) {
-      globalTimerValue = user.globalTimer || 0;
-      timerValue = user.timerValue || 0;
-      currentMode = modes[user.currentMode] || modes.DAY; // Восстанавливаем текущий режим
-      lastModeSwitch = new Date(user.lastModeSwitch) || Date.now(); // Восстанавливаем время последнего переключения
-      isTimerRunning = user.isTimerRunning || false;
-      lastUpdateTime = new Date(user.lastUpdateTime) || Date.now();
-
-      // Если таймер был запущен до перезагрузки, вычисляем, сколько времени прошло
-      if (isTimerRunning) {
-        const timeElapsed = Math.floor((Date.now() - lastUpdateTime) / 1000);
-        timerValue += timeElapsed;
-        globalTimerValue += timeElapsed;
-        startTimer(); // Запускаем таймер снова
-      }
-
-      updateUI();
-    }
-  } catch (err) {
-    console.error('Ошибка при загрузке данных:', err);
-    // Если сервер недоступен, загрузи данные из localStorage
-    const localData = JSON.parse(localStorage.getItem('userData')) || {};
-    globalTimerValue = localData.globalTimer || 0;
-    timerValue = localData.timerValue || 0;
-    currentMode = modes[localData.currentMode] || modes.DAY; // Восстанавливаем текущий режим
-    lastModeSwitch = new Date(localData.lastModeSwitch) || Date.now(); // Восстанавливаем время последнего переключения
-    isTimerRunning = localData.isTimerRunning || false;
-    lastUpdateTime = new Date(localData.lastUpdateTime) || Date.now();
-
-    // Если таймер был запущен до перезагрузки, вычисляем, сколько времени прошло
-    if (isTimerRunning) {
-      const timeElapsed = Math.floor((Date.now() - lastUpdateTime) / 1000);
-      timerValue += timeElapsed;
-      globalTimerValue += timeElapsed;
-      startTimer(); // Запускаем таймер снова
-    }
-
-    updateUI();
-  }
-}
-
-// Сохранение данных пользователя
-async function saveUserData() {
+// Сохранение данных в localStorage
+function saveToLocalStorage() {
   const userData = {
     globalTimer: globalTimerValue,
     timerValue: timerValue,
-    currentMode: currentMode.name, // Сохраняем текущий режим
-    lastModeSwitch: lastModeSwitch, // Сохраняем время последнего переключения
+    currentMode: currentMode.name,
+    lastModeSwitch: lastModeSwitch,
     isTimerRunning: isTimerRunning,
-    lastUpdateTime: lastUpdateTime, // Сохраняем время последнего обновления
+    lastUpdateTime: lastUpdateTime,
   };
-
-  try {
-    await fetch(`/user/${userId}/update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
-    });
-  } catch (err) {
-    console.error('Ошибка при сохранении данных:', err);
-    // Если сервер недоступен, сохрани данные в localStorage
-    localStorage.setItem('userData', JSON.stringify(userData));
-  }
+  localStorage.setItem('userData', JSON.stringify(userData));
 }
 
-// Периодический бэкап данных
-function startBackup() {
-  backupInterval = setInterval(() => {
-    saveUserData();
-  }, BACKUP_INTERVAL);
+// Восстановление данных из localStorage
+function loadFromLocalStorage() {
+  const localData = JSON.parse(localStorage.getItem('userData')) || {};
+  globalTimerValue = localData.globalTimer || 0;
+  timerValue = localData.timerValue || 0;
+  currentMode = modes[localData.currentMode] || modes.DAY;
+  lastModeSwitch = new Date(localData.lastModeSwitch) || Date.now();
+  isTimerRunning = localData.isTimerRunning || false;
+  lastUpdateTime = new Date(localData.lastUpdateTime) || Date.now();
+
+  // Если таймер был запущен до перезагрузки, вычисляем, сколько времени прошло
+  if (isTimerRunning) {
+    const timeElapsed = Math.floor((Date.now() - lastUpdateTime) / 1000);
+    timerValue += timeElapsed;
+    globalTimerValue += timeElapsed;
+    startTimer(); // Запускаем таймер снова
+  }
+
+  updateUI();
 }
 
 // Обновление интерфейса
@@ -152,7 +109,7 @@ function startTimer() {
     timerValue = 0;
   }
   isTimerRunning = true;
-  lastUpdateTime = Date.now(); // Обновляем время последнего запуска
+  lastUpdateTime = Date.now();
   startStopTimerButton.textContent = "Стоп";
   timerInterval = setInterval(() => {
     if (timerValue < currentMode.maxTime) {
@@ -163,24 +120,24 @@ function startTimer() {
       stopTimer();
     }
   }, 1000);
+  saveToLocalStorage(); // Сохраняем данные
 }
 
 function stopTimer() {
   isTimerRunning = false;
   clearInterval(timerInterval);
   startStopTimerButton.textContent = "Старт";
-  saveUserData();
+  saveToLocalStorage(); // Сохраняем данные
 }
 
 // Переключение режима
 switchModeButton.addEventListener('click', () => {
   if (switchModeButton.disabled) return;
 
-  // Переключаем режим и обновляем время последнего переключения
   currentMode = currentMode === modes.DAY ? modes.WEEK : modes.DAY;
   lastModeSwitch = Date.now();
   updateUI();
-  saveUserData();
+  saveToLocalStorage(); // Сохраняем данные
 });
 
 // Управление таймером
@@ -209,10 +166,9 @@ navButtons.forEach(button => {
 });
 
 // Загрузка данных при запуске
-loadUserData();
-startBackup();
+loadFromLocalStorage();
 
 // Сохранение данных при закрытии страницы
 window.addEventListener('beforeunload', () => {
-  saveUserData();
+  saveToLocalStorage();
 });
