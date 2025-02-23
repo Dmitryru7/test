@@ -18,12 +18,12 @@ const claimButton = document.getElementById('claimButton');
 const globalTimerElement = document.getElementById('globalTimer');
 
 // Инициализация пользователя
-const userId = tg.initDataUnsafe.user?.id || "default_user";
+const userId = tg.initDataUnsafe.user?.id || "default_user"; // Используем Telegram ID
 let userData = null;
 
 // Загрузка данных из localStorage
 function loadUserData() {
-  const savedData = localStorage.getItem(userId);
+  const savedData = localStorage.getItem(userId); // Используем Telegram ID как ключ
   if (savedData) {
     userData = JSON.parse(savedData);
     accumulatedTime = calculateAccumulatedTime(userData);
@@ -35,12 +35,14 @@ function loadUserData() {
       showClaimButton();
     }
   } else {
+    // Если данных нет, создаем нового пользователя
     userData = {
       accumulatedTime: 0,
       globalTime: 0,
       isTimerRunning: false,
       lastUpdate: Date.now(),
     };
+    saveProgress(); // Сохраняем начальные данные
   }
 
   updateUI();
@@ -111,7 +113,7 @@ function saveProgress() {
   userData.isTimerRunning = isTimerRunning;
   userData.lastUpdate = Date.now();
 
-  localStorage.setItem(userId, JSON.stringify(userData));
+  localStorage.setItem(userId, JSON.stringify(userData)); // Сохраняем по Telegram ID
 }
 
 // Форматирование времени
