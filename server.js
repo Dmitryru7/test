@@ -1,81 +1,54 @@
-require('dotenv').config({ path: __dirname + '/test.env' });
-
-console.log('MONGODB_URI:', process.env.MONGODB_URI);
-
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
 // Подключение к MongoDB
 mongoose.connect(process.env.MONGODB_URI);
-
-// Модель пользователя
 const userSchema = new mongoose.Schema({
-  telegramId: { type: String, required: true, unique: true },
-  globalTimer: { type: Number, default: 0 },
-  timerValue: { type: Number, default: 0 },
-  currentMode: { type: String, default: 'DAY' },
-  lastModeSwitch: { type: Date, default: Date.now },
+  userId: { type: String, unique: true, required: true },
+  accumulatedTime: { type: Number, default: 0 },
+  globalTime: { type: Number, default: 0 },
   isTimerRunning: { type: Boolean, default: false },
-  lastUpdateTime: { type: Date, default: Date.now },
-  referrals: [{ type: String }],
-  bonusHistory: [{
-    date: { type: Date, default: Date.now },
-    amount: { type: Number, required: true },
-  }],
+  lastUpdate: { type: Date, default: Date.now }
 });
 
 const User = mongoose.model('User', userSchema);
 
-// Обработчик для корневого пути
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
-
-// Получение данных пользователя
-app.get('/user/:telegramId', async (req, res) => {
+// API Endpoints
+app.get('/api/users/:userId', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.params.telegramId });
-    if (!user) {
-      // Если пользователь не найден, создаём нового
-      const newUser = new User({ telegramId: req.params.telegramId });
-      await newUser.save();
-      return res.json(newUser);
-    }
+    const user = await User.findOne({ userId: req.params.userId });
     res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Обновление данных пользователя
-app.post('/user/:telegramId/update', async (req, res) => {
-  const { globalTimer, timerValue, currentMode, lastModeSwitch, isTimerRunning, lastUpdateTime } = req.body;
+app.post('/api/users', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.params.telegramId });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (globalTimer !== undefined) user.globalTimer = globalTimer;
-    if (timerValue !== undefined) user.timerValue = timerValue;
-    if (currentMode !== undefined) user.currentMode = currentMode;
-    if (lastModeSwitch !== undefined) user.lastModeSwitch = lastModeSwitch;
-    if (isTimerRunning !== undefined) user.isTimerRunning = isTimerRunning;
-    if (lastUpdateTime !== undefined) user.lastUpdateTime = lastUpdateTime;
-
-    await user.save();
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const newUser = new User(req.body);
+    await newUser.save();
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid data' });
   }
 });
 
-// Запуск сервера
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.put('/api/users/:userId', async (req, res) => {
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { userId: req.params.userId },
+      req.body,
+      { new: true }
+    );
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(400).json({ error: 'Update failed' });
+  }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
