@@ -147,6 +147,22 @@ async function initNewUser() {
   updateUI();
 }
 
+// Навигация
+const navButtons = document.querySelectorAll('.navbar button');
+navButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    const targetPageId = button.getAttribute('data-page');
+    const pages = document.querySelectorAll('.page');
+    pages.forEach(page => {
+      if (page.id === targetPageId) {
+        page.classList.add('active');
+      } else {
+        page.classList.remove('active');
+      }
+    });
+  });
+});
+
 // Запуск приложения
 if (userId) {
   loadUserData();
