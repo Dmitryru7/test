@@ -1,4 +1,4 @@
-// Инициализация Telegram Web App
+// Заглушка для Telegram Web App
 const tg = window.Telegram?.WebApp || {
   initDataUnsafe: { user: { id: "test_user" } },
   ready: () => console.log("Telegram Web App is ready"),
@@ -18,32 +18,32 @@ const claimButton = document.getElementById('claimButton');
 const globalTimerElement = document.getElementById('globalTimer');
 
 // Инициализация пользователя
-const userId = tg.initDataUnsafe.user?.id;
+const userId = tg.initDataUnsafe.user?.id || "default_user";
 let userData = null;
 
-console.log("Инициализация приложения...");
-console.log("User ID:", userId);
-
-// Загрузка данных пользователя
-async function loadUserData() {
-  try {
-    const response = await fetch(`/api/users/${userId}`);
-    userData = await response.json();
-    
+// Загрузка данных из localStorage
+function loadUserData() {
+  const savedData = localStorage.getItem(userId);
+  if (savedData) {
+    userData = JSON.parse(savedData);
     accumulatedTime = calculateAccumulatedTime(userData);
     globalTime = userData.globalTime || 0;
-    
+
     if (userData.isTimerRunning) {
       startTimer();
     } else if (accumulatedTime >= MODE_DURATION) {
       showClaimButton();
     }
-    
-    updateUI();
-  } catch (error) {
-    console.error('Ошибка загрузки данных:', error);
-    initNewUser();
+  } else {
+    userData = {
+      accumulatedTime: 0,
+      globalTime: 0,
+      isTimerRunning: false,
+      lastUpdate: Date.now(),
+    };
   }
+
+  updateUI();
 }
 
 // Расчет накопленного времени
@@ -56,23 +56,23 @@ function calculateAccumulatedTime(data) {
 // Запуск таймера
 function startTimer() {
   if (isTimerRunning) return;
-  
+
   isTimerRunning = true;
   startTimestamp = Date.now();
   claimButton.disabled = true;
   claimButton.textContent = 'Таймер запущен';
-  
+
   // Обновление каждую секунду
   const interval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
     accumulatedTime = Math.min(elapsed + (userData?.accumulatedTime || 0), MODE_DURATION);
-    
+
     if (accumulatedTime >= MODE_DURATION) {
       clearInterval(interval);
       isTimerRunning = false;
       showClaimButton();
     }
-    
+
     updateUI();
     saveProgress();
   }, 1000);
@@ -86,38 +86,32 @@ function showClaimButton() {
 }
 
 // Забрать награду
-async function claimReward() {
+function claimReward() {
   globalTime += MODE_DURATION;
   accumulatedTime = 0;
   isTimerRunning = false;
-  
-  await fetch(`/api/users/${userId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      accumulatedTime: 0,
-      globalTime,
-      isTimerRunning: false
-    })
-  });
-  
+
+  userData = {
+    accumulatedTime: 0,
+    globalTime,
+    isTimerRunning: false,
+    lastUpdate: Date.now(),
+  };
+
+  saveProgress();
   updateUI();
   claimButton.textContent = 'Старт';
   claimButton.onclick = startTimer;
 }
 
 // Сохранение прогресса
-async function saveProgress() {
-  await fetch(`/api/users/${userId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      accumulatedTime,
-      globalTime,
-      isTimerRunning,
-      lastUpdate: Date.now()
-    })
-  });
+function saveProgress() {
+  userData.accumulatedTime = accumulatedTime;
+  userData.globalTime = globalTime;
+  userData.isTimerRunning = isTimerRunning;
+  userData.lastUpdate = Date.now();
+
+  localStorage.setItem(userId, JSON.stringify(userData));
 }
 
 // Форматирование времени
@@ -134,31 +128,11 @@ function updateUI() {
   globalTimerElement.textContent = `Накоплено: ${formatTime(globalTime)}`;
 }
 
-// Инициализация нового пользователя
-async function initNewUser() {
-  userData = {
-    userId,
-    accumulatedTime: 0,
-    globalTime: 0,
-    isTimerRunning: false,
-    lastUpdate: Date.now()
-  };
-  
-  await fetch('/api/users', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(userData)
-  });
-  
-  updateUI();
-}
-
 // Навигация
 const navButtons = document.querySelectorAll('.navbar button');
 navButtons.forEach(button => {
   button.addEventListener('click', () => {
     const targetPageId = button.getAttribute('data-page');
-    console.log("Переход на страницу:", targetPageId);
     const pages = document.querySelectorAll('.page');
     pages.forEach(page => {
       if (page.id === targetPageId) {
@@ -171,14 +145,7 @@ navButtons.forEach(button => {
 });
 
 // Инициализация кнопки "Старт"
-claimButton.onclick = () => {
-  console.log("Кнопка 'Старт' нажата");
-  startTimer();
-};
+claimButton.onclick = startTimer;
 
 // Запуск приложения
-if (userId) {
-  loadUserData();
-} else {
-  document.body.innerHTML = '<h1>Ошибка авторизации</h1>';
-}
+loadUserData();
