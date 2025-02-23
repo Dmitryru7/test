@@ -1,5 +1,5 @@
 // Инициализация Telegram Web App
-const tg = window.Telegram?.WebApp || { initDataUnsafe: { user: { id: "test_user" } };
+const tg = window.Telegram?.WebApp || { initDataUnsafe: { user: { id: "test_user" } } };
 tg.ready();
 
 // Конфигурация
@@ -162,6 +162,9 @@ navButtons.forEach(button => {
     });
   });
 });
+
+// Инициализация кнопки "Старт"
+claimButton.onclick = startTimer;
 
 // Запуск приложения
 if (userId) {
