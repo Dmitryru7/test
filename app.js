@@ -1,5 +1,8 @@
 // Инициализация Telegram Web App
-const tg = window.Telegram?.WebApp || { initDataUnsafe: { user: { id: "test_user" } } };
+const tg = window.Telegram?.WebApp || {
+  initDataUnsafe: { user: { id: "test_user" } },
+  ready: () => console.log("Telegram Web App is ready"),
+};
 tg.ready();
 
 // Конфигурация
@@ -17,6 +20,9 @@ const globalTimerElement = document.getElementById('globalTimer');
 // Инициализация пользователя
 const userId = tg.initDataUnsafe.user?.id;
 let userData = null;
+
+console.log("Инициализация приложения...");
+console.log("User ID:", userId);
 
 // Загрузка данных пользователя
 async function loadUserData() {
@@ -152,6 +158,7 @@ const navButtons = document.querySelectorAll('.navbar button');
 navButtons.forEach(button => {
   button.addEventListener('click', () => {
     const targetPageId = button.getAttribute('data-page');
+    console.log("Переход на страницу:", targetPageId);
     const pages = document.querySelectorAll('.page');
     pages.forEach(page => {
       if (page.id === targetPageId) {
@@ -164,7 +171,10 @@ navButtons.forEach(button => {
 });
 
 // Инициализация кнопки "Старт"
-claimButton.onclick = startTimer;
+claimButton.onclick = () => {
+  console.log("Кнопка 'Старт' нажата");
+  startTimer();
+};
 
 // Запуск приложения
 if (userId) {
