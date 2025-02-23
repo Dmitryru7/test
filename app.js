@@ -1,174 +1,155 @@
-// Заглушка для Telegram Web App API
-if (typeof window.Telegram === 'undefined') {
-  window.Telegram = {
-    WebApp: {
-      ready: () => console.log('Telegram Web App is ready'),
-      initDataUnsafe: { user: { id: "local_user_id" } },
-    },
-  };
-}
-
-const tg = window.Telegram.WebApp;
+// Инициализация Telegram Web App
+const tg = window.Telegram?.WebApp || { initDataUnsafe: { user: { id: "test_user" } };
 tg.ready();
 
-const userId = tg.initDataUnsafe.user?.id || "default_user_id";
-
-// Режимы таймера
-const modes = {
-  DAY: { name: "Сутки", maxTime: 24 * 60 * 60 },
-  WEEK: { name: "Неделя", maxTime: 168 * 60 * 60 },
-};
-
-let currentMode = modes.DAY;
-let timerValue = 0;
-let globalTimerValue = 0;
+// Конфигурация
+const MODE_DURATION = 24 * 60 * 60; // 24 часа в секундах
 let isTimerRunning = false;
-let timerInterval;
-let lastModeSwitch = Date.now();
-let lastUpdateTime = Date.now();
+let startTimestamp = 0;
+let accumulatedTime = 0;
+let globalTime = 0;
 
-// Элементы DOM
-const timerDisplay = document.getElementById('timer');
-const globalTimerDisplay = document.getElementById('globalTimer');
-const startStopTimerButton = document.getElementById('startStopTimer');
-const modeDisplay = document.getElementById('modeDisplay');
-const switchModeButton = document.getElementById('switchMode');
-const nextSwitchTimeDisplay = document.getElementById('nextSwitchTime');
+// Элементы интерфейса
+const timerElement = document.getElementById('timer');
+const claimButton = document.getElementById('claimButton');
+const globalTimerElement = document.getElementById('globalTimer');
 
-// Периодический бэкап данных (каждые 10 секунд)
-const BACKUP_INTERVAL = 10000; // 10 секунд
-let backupInterval;
+// Инициализация пользователя
+const userId = tg.initDataUnsafe.user?.id;
+let userData = null;
 
-// Сохранение данных в localStorage
-function saveToLocalStorage() {
-  const userData = {
-    globalTimer: globalTimerValue,
-    timerValue: timerValue,
-    currentMode: currentMode.name,
-    lastModeSwitch: lastModeSwitch,
-    isTimerRunning: isTimerRunning,
-    lastUpdateTime: lastUpdateTime,
-  };
-  localStorage.setItem('userData', JSON.stringify(userData));
-}
-
-// Восстановление данных из localStorage
-function loadFromLocalStorage() {
-  const localData = JSON.parse(localStorage.getItem('userData')) || {};
-  globalTimerValue = localData.globalTimer || 0;
-  timerValue = localData.timerValue || 0;
-  currentMode = modes[localData.currentMode] || modes.DAY;
-  lastModeSwitch = new Date(localData.lastModeSwitch) || Date.now();
-  isTimerRunning = localData.isTimerRunning || false;
-  lastUpdateTime = new Date(localData.lastUpdateTime) || Date.now();
-
-  // Если таймер был запущен до перезагрузки, вычисляем, сколько времени прошло
-  if (isTimerRunning) {
-    const timeElapsed = Math.floor((Date.now() - lastUpdateTime) / 1000);
-    timerValue += timeElapsed;
-    globalTimerValue += timeElapsed;
-    startTimer(); // Запускаем таймер снова
+// Загрузка данных пользователя
+async function loadUserData() {
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    userData = await response.json();
+    
+    accumulatedTime = calculateAccumulatedTime(userData);
+    globalTime = userData.globalTime || 0;
+    
+    if (userData.isTimerRunning) {
+      startTimer();
+    } else if (accumulatedTime >= MODE_DURATION) {
+      showClaimButton();
+    }
+    
+    updateUI();
+  } catch (error) {
+    console.error('Ошибка загрузки данных:', error);
+    initNewUser();
   }
-
-  updateUI();
 }
 
-// Обновление интерфейса
-function updateUI() {
-  timerDisplay.textContent = formatTime(timerValue);
-  globalTimerDisplay.textContent = `Глобальный счетчик: ${formatTime(globalTimerValue)}`;
-  modeDisplay.textContent = `Режим: ${currentMode.name}`;
-  updateModeSwitchCooldown();
+// Расчет накопленного времени
+function calculateAccumulatedTime(data) {
+  if (!data.isTimerRunning) return data.accumulatedTime;
+  const passedSeconds = Math.floor((Date.now() - data.lastUpdate) / 1000);
+  return Math.min(data.accumulatedTime + passedSeconds, MODE_DURATION);
+}
+
+// Запуск таймера
+function startTimer() {
+  if (isTimerRunning) return;
+  
+  isTimerRunning = true;
+  startTimestamp = Date.now();
+  claimButton.disabled = true;
+  claimButton.textContent = 'Таймер запущен';
+  
+  // Обновление каждую секунду
+  const interval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTimestamp) / 1000);
+    accumulatedTime = Math.min(elapsed + (userData?.accumulatedTime || 0), MODE_DURATION);
+    
+    if (accumulatedTime >= MODE_DURATION) {
+      clearInterval(interval);
+      isTimerRunning = false;
+      showClaimButton();
+    }
+    
+    updateUI();
+    saveProgress();
+  }, 1000);
+}
+
+// Показать кнопку "Забрать"
+function showClaimButton() {
+  claimButton.disabled = false;
+  claimButton.textContent = `Забрать ${formatTime(MODE_DURATION)}!`;
+  claimButton.onclick = claimReward;
+}
+
+// Забрать награду
+async function claimReward() {
+  globalTime += MODE_DURATION;
+  accumulatedTime = 0;
+  isTimerRunning = false;
+  
+  await fetch(`/api/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      accumulatedTime: 0,
+      globalTime,
+      isTimerRunning: false
+    })
+  });
+  
+  updateUI();
+  claimButton.textContent = 'Старт';
+  claimButton.onclick = startTimer;
+}
+
+// Сохранение прогресса
+async function saveProgress() {
+  await fetch(`/api/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      accumulatedTime,
+      globalTime,
+      isTimerRunning,
+      lastUpdate: Date.now()
+    })
+  });
 }
 
 // Форматирование времени
 function formatTime(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-// Переключение режима
-function updateModeSwitchCooldown() {
-  const now = Date.now();
-  const timeLeft = lastModeSwitch + 24 * 60 * 60 * 1000 - now;
-
-  if (timeLeft > 0) {
-    switchModeButton.disabled = true;
-    nextSwitchTimeDisplay.textContent = formatTime(Math.floor(timeLeft / 1000));
-  } else {
-    switchModeButton.disabled = false;
-    nextSwitchTimeDisplay.textContent = "Режим можно переключить";
-  }
+// Обновление интерфейса
+function updateUI() {
+  const remaining = MODE_DURATION - accumulatedTime;
+  timerElement.textContent = formatTime(remaining);
+  globalTimerElement.textContent = `Накоплено: ${formatTime(globalTime)}`;
 }
 
-// Управление таймером
-function startTimer() {
-  if (timerValue >= currentMode.maxTime) {
-    timerValue = 0;
-  }
-  isTimerRunning = true;
-  lastUpdateTime = Date.now();
-  startStopTimerButton.textContent = "Стоп";
-  timerInterval = setInterval(() => {
-    if (timerValue < currentMode.maxTime) {
-      timerValue++;
-      globalTimerValue++;
-      updateUI();
-    } else {
-      stopTimer();
-    }
-  }, 1000);
-  saveToLocalStorage(); // Сохраняем данные
-}
-
-function stopTimer() {
-  isTimerRunning = false;
-  clearInterval(timerInterval);
-  startStopTimerButton.textContent = "Старт";
-  saveToLocalStorage(); // Сохраняем данные
-}
-
-// Переключение режима
-switchModeButton.addEventListener('click', () => {
-  if (switchModeButton.disabled) return;
-
-  currentMode = currentMode === modes.DAY ? modes.WEEK : modes.DAY;
-  lastModeSwitch = Date.now();
-  updateUI();
-  saveToLocalStorage(); // Сохраняем данные
-});
-
-// Управление таймером
-startStopTimerButton.addEventListener('click', () => {
-  if (isTimerRunning) {
-    stopTimer();
-  } else {
-    startTimer();
-  }
-});
-
-// Навигация
-const navButtons = document.querySelectorAll('.navbar button');
-navButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    const targetPageId = button.getAttribute('data-page');
-    const pages = document.querySelectorAll('.page');
-    pages.forEach(page => {
-      if (page.id === targetPageId) {
-        page.classList.add('active');
-      } else {
-        page.classList.remove('active');
-      }
-    });
+// Инициализация нового пользователя
+async function initNewUser() {
+  userData = {
+    userId,
+    accumulatedTime: 0,
+    globalTime: 0,
+    isTimerRunning: false,
+    lastUpdate: Date.now()
+  };
+  
+  await fetch('/api/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
   });
-});
+  
+  updateUI();
+}
 
-// Загрузка данных при запуске
-loadFromLocalStorage();
-
-// Сохранение данных при закрытии страницы
-window.addEventListener('beforeunload', () => {
-  saveToLocalStorage();
-});
+// Запуск приложения
+if (userId) {
+  loadUserData();
+} else {
+  document.body.innerHTML = '<h1>Ошибка авторизации</h1>';
+}
